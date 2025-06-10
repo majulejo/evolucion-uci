@@ -440,6 +440,20 @@ body.active .calculadora-cerrar:hover {
     transition: all 0.3s ease;
     /* Animación suave */
 }
+/* ───────────────────────────────────────── */
+/* BOX NAVIGATION: estado “activo”          */
+/* ───────────────────────────────────────── */
+.container__nav ul li a.active {
+  background-color: var(--hover-input) !important;
+  color: var(--texto-1) !important;
+  border-color: var(--borde) !important;
+  box-shadow: 0 0 8px var(--light-shadow);
+  transform: scale(1.05);
+}
+body.active .container__nav ul li a.active {
+  background-color: var(--borde) !important;
+  color: var(--dark-1) !important;
+}
 
 /* =============================== */
 /* ======icono_balance============ */
