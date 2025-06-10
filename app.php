@@ -1,6 +1,6 @@
 <?php
 session_start();
-
+//app.php
 header("Cache-Control: no-cache, no-store, must-revalidate");
 header("Pragma: no-cache");
 header("Expires: 0");
@@ -1012,12 +1012,11 @@ if (!isset($_SESSION['user_id'])) {
 
   <script>
       
-    // Variables globales
-let selectedBox = null; // Inicializar selectedBox como null
+   // Variables globales
+let selectedBox = null;
 let currentUserId = null;
 let currentInformeId = null;
 let currentInformeBox = null;
-let autosaveTimer = null;
 
 const DEBOUNCE_MS = 800;
 const campos = [
@@ -1026,18 +1025,29 @@ const campos = [
   "piel", "otros", "especial"
 ];
 
-// Función para cerrar sesión
-function cerrarSesion() {
-  // Limpiar drafts locales
-  if (currentUserId) {
-    Object.keys(sessionStorage).filter(k => k.startsWith(`autosave_${currentUserId}_`)).forEach(k => sessionStorage.removeItem(k));
+// Función para eliminar el draft
+async function eliminarDraft() {
+  if (!selectedBox) {
+    console.error("No se ha seleccionado ningún box.");
+    return;
   }
 
-  // Limpiar el ID del usuario
-  sessionStorage.removeItem("currentUserId");
+  try {
+    const response = await fetch('clear_draft.php', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ box: selectedBox })
+    });
+    const data = await response.json();
+    console.log("Respuesta del servidor al eliminar draft:", data);
 
-  // Redirigir a la página de inicio de sesión
-  window.location.href = "index.html";
+    if (!data.success) {
+      throw new Error(data.message);
+    }
+  } catch (error) {
+    console.error("Error al eliminar draft:", error.message);
+  }
 }
 
 // Evento DOMContentLoaded
@@ -1083,6 +1093,24 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 // Resto de funciones...
+
+
+
+
+//===========================================================
+
+// Definición de cerrarSesion
+// ====== Función Cerrar Sesión ======
+  function cerrarSesion() {
+    if (currentUserId) {
+      Object.keys(sessionStorage)
+        .filter(k => k.startsWith(`autosave_${currentUserId}_`))
+        .forEach(k => sessionStorage.removeItem(k));
+    }
+    sessionStorage.removeItem("currentUserId");
+    window.location.href = "index.html";
+  }
+  
 // Resto de funciones...
 
 function saveLocal(boxNumber) {
@@ -1122,6 +1150,7 @@ async function saveDraft() {
     body: JSON.stringify({ box: selectedBox, datos })
   });
 }
+
 
 function attachAutosaveListeners() {
   campos.forEach(id => {
@@ -1345,10 +1374,10 @@ function clonarInforme() {
    
    
    
-
+//-------------------------------------------
 // En la función selectBox():
 async function selectBox(boxNumber) {
-  if (selectedBox) saveLocal(selectedBox); // Guarda el box anterior si está definido
+  if (selectedBox) saveLocal(selectedBox); // Guardar el box anterior si está definido
   selectedBox = boxNumber;
 
   // Marcar botón activo
@@ -1362,7 +1391,7 @@ async function selectBox(boxNumber) {
   // Habilitar campos
   habilitarCampos();
 
-  // Intentar cargar borrador o último informe guardado
+  // Cargar borrador o último informe guardado
   try {
     const res = await fetch(`get_draft.php?box=${boxNumber}`, { credentials: 'same-origin' });
     const js = await res.json();
@@ -1410,7 +1439,7 @@ async function selectBox(boxNumber) {
   borrarDatos();
 }
 
-
+//-------------------------------------------
     async function guardarInformeAuto() {
   if (!selectedBox || !currentUserId) return;
 
