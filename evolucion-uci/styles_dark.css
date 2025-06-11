@@ -90,6 +90,30 @@ section {
 
 }
 
+/* ─────────────────────────────── */
+/* Indicador flotante en esquina   */
+/* ─────────────────────────────── */
+#box-indicador-flotante {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  background: var(--hover-input);
+  color:    var(--texto-1);
+  padding:  0.5rem 1rem;
+  border:   2px solid var(--borde);
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  font-weight: bold;
+  z-index: 1000;
+  user-select: none;
+}
+/* Opcional: versión oscura */
+body.dark-mode #box-indicador-flotante {
+  background: var(--borde);
+  color:      var(--dark-1);
+}
+
+
 /* =============================== */
 /*         CALCULADORA         */
 /* =============================== */

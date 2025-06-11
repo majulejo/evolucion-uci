@@ -319,10 +319,10 @@ if (!isset($_SESSION['user_id'])) {
 
 /* INDICADOR FLOTANTE (a la izquierda) */
 #box-indicador-flotante {
-  position: absolute;
+  position: fixed;
   left: 2%;
   top: 40px;
-  z-index: 1000;
+  z-index: 1600;
   display: none;
   padding: 6px 12px;
   font-size: 16px;
@@ -1221,6 +1221,7 @@ function habilitarCampos() {
     } else {
       console.warn(`Elemento con ID ${campoId} no encontrado.`);
     }
+    document.getElementById("box-indicador-flotante").style.display = "none";
   });
 }
 
@@ -1228,6 +1229,7 @@ function habilitarCampos() {
 //===================================================
 
 function deshabilitarCampos() {
+    document.getElementById("box-indicador-flotante").style.display = "none";
   campos.forEach(campoId => {
     const textarea = document.getElementById(campoId);
     if (textarea) {
@@ -1406,6 +1408,8 @@ async function selectBox(boxNumber) {
 
   document.getElementById("numero-box-seleccionado-msg").textContent = boxNumber;
   document.getElementById("mensaje-box-seleccionado").style.display = "block";
+  document.getElementById("numero-box-seleccionado-fijo").textContent = boxNumber;
+document.getElementById("box-indicador-flotante").style.display = "block";
 
   habilitarCampos();
   attachAutosaveListeners();

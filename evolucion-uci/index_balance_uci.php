@@ -73,7 +73,11 @@ $_SESSION['last_access'] = time();
     <!---------BOXES------->
     <h1 class="title">Balances</h1>
     
-    
+    <!-- Recuadro flotante de Box -->
+<div id="box-indicador-flotante" aria-live="polite">
+  Box <span id="box-indicador-num">–</span>
+</div>
+
     
 
 
