@@ -1,5 +1,7 @@
-//load_report.php
 <?php
+//load_report.php
+
+date_default_timezone_set('Europe/Madrid');
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 session_start();

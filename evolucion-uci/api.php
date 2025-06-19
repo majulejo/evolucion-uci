@@ -2,11 +2,9 @@
 header("Content-Type: application/json");
 session_start();
 
-// ——————————————————————————————————————————————
-// 1) Configuración de la base de datos (ajusta si usas otro fichero de config)
-// ——————————————————————————————————————————————
+// 1) Configuración de la base de datos
 $host = "localhost";
-$db   = "u724879249_evolucion_uci";
+$db = "u724879249_evolucion_uci";
 $user = "u724879249_jamarquez06";
 $pass = "Farolill01.";
 
@@ -16,7 +14,7 @@ try {
         $user,
         $pass,
         [
-            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
         ]
     );
@@ -28,10 +26,8 @@ try {
     exit;
 }
 
-// ——————————————————————————————————————————————
-// 2) Leemos el JSON enviado por POST
-// ——————————————————————————————————————————————
-$raw  = file_get_contents("php://input");
+// 2) Leer payload
+$raw = file_get_contents("php://input");
 $data = json_decode($raw, true);
 
 if (!is_array($data) || !isset($data['action'])) {
@@ -42,15 +38,18 @@ if (!is_array($data) || !isset($data['action'])) {
     exit;
 }
 
-// ——————————————————————————————————————————————
-// 3) Por ahora forzamos userId=1 durante la depuración.
-//    Más adelante, reemplázalo por $_SESSION['userId'] tras implementar login.
-// ——————————————————————————————————————————————
-$userId = 1;
+// 3) Obtener userId desde sesión
+$userId = $_SESSION['user_id'] ?? null;
 
-// ——————————————————————————————————————————————
-// 4) Discriminamos la acción
-// ——————————————————————————————————————————————
+if (!$userId) {
+    echo json_encode([
+        "success" => false,
+        "message" => "Usuario no autenticado."
+    ]);
+    exit;
+}
+
+// 4) Ejecutar acción
 switch ($data['action']) {
     case 'save':
         saveData($pdo, $userId, $data);
@@ -75,289 +74,34 @@ switch ($data['action']) {
     default:
         echo json_encode([
             "success" => false,
-            "message" => "Acción desconocida: " . $data['action']
+            "message" => "Acción no reconocida."
         ]);
         break;
 }
-exit;
 
-////////////////////////////////////////////////////////////////////////////////
-//                             FUNCIONES INTERNAS                             //
-////////////////////////////////////////////////////////////////////////////////
+// 5) Funciones de ejemplo (deberás rellenarlas con tu lógica real)
 
-/**
- * saveData:
- *   Inserta o actualiza con ON DUPLICATE KEY UPDATE los campos de datos_balance.
- *   Se espera que $data tenga:
- *     - $data['boxNumber']
- *     - $data['data'] = array asociativo: campo => valor
- */
-function saveData(PDO $pdo, int $userId, array $data) {
-    if (!isset($data['boxNumber']) || !isset($data['data']) || !is_array($data['data'])) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Parámetros insuficientes para guardar datos"
-        ]);
-        return;
-    }
-
-    $boxNumber = (int) $data['boxNumber'];
-    $campos    = $data['data']; // Ej: ["peso_box"=>"70", "horas_desde_ingreso_box"=>"5", …]
-
-    // Construimos dinámicamente las columnas, placeholders y la parte de UPDATE
-    $columnas      = [];
-    $placeholders  = [];
-    $updates       = [];
-    $valoresParams = [
-        ':usuario_id' => $userId,
-        ':box_number' => $boxNumber
-    ];
-
-    $i = 0;
-    foreach ($campos as $col => $val) {
-        // IMPORTANTE: $col debe coincidir EXACTAMENTE con el nombre de la columna en la tabla MySQL
-        $param           = ":v{$i}";
-        $columnas[]      = "`$col`";
-        $placeholders[]  = $param;
-        $updates[]       = "`$col` = VALUES(`$col`)";
-        $valoresParams[$param] = $val;
-        $i++;
-    }
-
-    if (empty($columnas)) {
-        echo json_encode([
-            "success" => false,
-            "message" => "No hay datos para guardar"
-        ]);
-        return;
-    }
-
-    $colList   = implode(", ", $columnas);
-    $valList   = implode(", ", $placeholders);
-    $updateStr = implode(", ", $updates);
-
-    $sql = "
-        INSERT INTO datos_balance (
-            usuario_id,
-            box_number,
-            $colList
-        ) VALUES (
-            :usuario_id,
-            :box_number,
-            $valList
-        )
-        ON DUPLICATE KEY UPDATE
-            $updateStr
-    ";
-
-    try {
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute($valoresParams);
-        echo json_encode([ "success" => true ]);
-    } catch (PDOException $e) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Error al guardar los datos: " . $e->getMessage()
-        ]);
-    }
+function saveData($pdo, $userId, $data) {
+    // Aquí va tu lógica de guardado
+    echo json_encode(["success" => true, "message" => "Datos guardados"]);
 }
 
-/**
- * loadData:
- *   Recupera todos los campos de datos_balance para (usuario_id, box_number).
- *   Devuelve el JSON de la fila o [] si no existe.
- *   Se espera que $data tenga:
- *     - $data['boxNumber']
- */
-function loadData(PDO $pdo, int $userId, array $data) {
-    if (!isset($data['boxNumber'])) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Parámetros insuficientes para cargar datos"
-        ]);
-        return;
-    }
-
-    $boxNumber = (int) $data['boxNumber'];
-    $stmt      = $pdo->prepare("
-        SELECT *
-        FROM datos_balance
-        WHERE usuario_id = :uid
-          AND box_number = :box
-        LIMIT 1
-    ");
-    $stmt->execute([
-        ':uid' => $userId,
-        ':box' => $boxNumber
-    ]);
-
-    $row = $stmt->fetch();
-    if ($row) {
-        echo json_encode($row);
-    } else {
-        echo json_encode([]);
-    }
+function loadData($pdo, $userId, $data) {
+    // Aquí va tu lógica de carga
+    echo json_encode(["success" => true, "data" => []]);
 }
 
-/**
- * deleteAll:
- *   Elimina la fila entera de datos_balance para (usuario_id, box_number).
- *   Se espera que $data tenga:
- *     - $data['boxNumber']
- */
-function deleteAll(PDO $pdo, int $userId, array $data) {
-    if (!isset($data['boxNumber'])) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Parámetros insuficientes para borrar todos los datos"
-        ]);
-        return;
-    }
-
-    $boxNumber = (int) $data['boxNumber'];
-    $stmt      = $pdo->prepare("
-        DELETE FROM datos_balance
-        WHERE usuario_id = :uid
-          AND box_number = :box
-    ");
-    try {
-        $stmt->execute([
-            ':uid' => $userId,
-            ':box' => $boxNumber
-        ]);
-        echo json_encode([ "success" => true ]);
-    } catch (PDOException $e) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Error al borrar todos los datos: " . $e->getMessage()
-        ]);
-    }
+function deleteAll($pdo, $userId, $data) {
+    // Aquí va tu lógica de eliminación total
+    echo json_encode(["success" => true, "message" => "Todos los datos eliminados"]);
 }
 
-/**
- * deleteIngresos:
- *   Pone NULL en todas las columnas relacionadas con ingresos
- *   para (usuario_id, box_number).
- *   Se espera que $data tenga:
- *     - $data['boxNumber']
- */
-function deleteIngresos(PDO $pdo, int $userId, array $data) {
-    if (!isset($data['boxNumber'])) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Parámetros insuficientes para borrar ingresos"
-        ]);
-        return;
-    }
-
-    $boxNumber = (int) $data['boxNumber'];
-    $camposIngresos = [
-        "ingreso_midazolam_box",
-        "ingreso_fentanest_box",
-        "ingreso_propofol_box",
-        "ingreso_remifentanilo_box",
-        "ingreso_dexdor_box",
-        "ingreso_noradrenalina_box",
-        "ingreso_insulina_box",
-        "ingreso_sueroterapia1_box",
-        "ingreso_sueroterapia2_box",
-        "ingreso_sueroterapia3_box",
-        "ingreso_medicacion_box",
-        "ingreso_sangreplasma_box",
-        "ingreso_agua_endogena_box",
-        "ingreso_oral_box",
-        "ingreso_enteral_box",
-        "ingreso_parenteral_box",
-        "resumen_total_ingresos_box"
-    ];
-    $setParts = [];
-    foreach ($camposIngresos as $f) {
-        $setParts[] = "`$f` = NULL";
-    }
-    $setClause = implode(", ", $setParts);
-
-    $sql = "
-        UPDATE datos_balance
-        SET $setClause
-        WHERE usuario_id = :uid
-          AND box_number = :box
-    ";
-    try {
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([
-            ':uid' => $userId,
-            ':box' => $boxNumber
-        ]);
-        echo json_encode([ "success" => true ]);
-    } catch (PDOException $e) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Error al borrar los ingresos: " . $e->getMessage()
-        ]);
-    }
+function deleteIngresos($pdo, $userId, $data) {
+    // Aquí va tu lógica de eliminar ingresos
+    echo json_encode(["success" => true, "message" => "Ingresos eliminados"]);
 }
 
-/**
- * deletePerdidas:
- *   Pone NULL en todas las columnas relacionadas con pérdidas
- *   para (usuario_id, box_number).
- *   Se espera que $data tenga:
- *     - $data['boxNumber']
- */
-function deletePerdidas(PDO $pdo, int $userId, array $data) {
-    if (!isset($data['boxNumber'])) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Parámetros insuficientes para borrar pérdidas"
-        ]);
-        return;
-    }
-
-    $boxNumber = (int) $data['boxNumber'];
-    $camposPerdidas = [
-        "perdida_orina_box",
-        "perdida_vomitos_box",
-        "fiebre37_horas_box",
-        "fiebre37_calculo_box",
-        "fiebre38_horas_box",
-        "fiebre38_calculo_box",
-        "fiebre39_horas_box",
-        "fiebre39_calculo_box",
-        "rpm25_horas_box",
-        "rpm25_calculo_box",
-        "rpm35_horas_box",
-        "rpm35_calculo_box",
-        "perdida_sng_box",
-        "perdida_hdfvvc_box",
-        "perdida_drenajes_box",
-        "perdidas_insensibles_box",
-        "perdida_fuerafluidos_box",
-        "total_perdidas_box"
-    ];
-    $setParts = [];
-    foreach ($camposPerdidas as $f) {
-        $setParts[] = "`$f` = NULL";
-    }
-    $setClause = implode(", ", $setParts);
-
-    $sql = "
-        UPDATE datos_balance
-        SET $setClause
-        WHERE usuario_id = :uid
-          AND box_number = :box
-    ";
-    try {
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([
-            ':uid' => $userId,
-            ':box' => $boxNumber
-        ]);
-        echo json_encode([ "success" => true ]);
-    } catch (PDOException $e) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Error al borrar las pérdidas: " . $e->getMessage()
-        ]);
-    }
+function deletePerdidas($pdo, $userId, $data) {
+    // Aquí va tu lógica de eliminar pérdidas
+    echo json_encode(["success" => true, "message" => "Pérdidas eliminadas"]);
 }
-?>

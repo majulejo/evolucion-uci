@@ -1,7 +1,7 @@
 <?php
 session_start();
 require 'db.php';
-
+date_default_timezone_set('Europe/Madrid');
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.html");
     exit();

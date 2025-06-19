@@ -1,4 +1,5 @@
 <?php
+date_default_timezone_set('Europe/Madrid');
 // delete_box_reports.php
 date_default_timezone_set('Europe/Madrid');
 session_start();

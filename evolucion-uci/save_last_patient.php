@@ -1,4 +1,7 @@
 <?php
+date_default_timezone_set('Europe/Madrid');
+
+
 require 'db.php'; // conexión a la BD
 
 $data = json_decode(file_get_contents('php://input'), true);

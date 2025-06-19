@@ -283,43 +283,46 @@ document.addEventListener("DOMContentLoaded", () => {
   // ——————————————————————————————
   // 7) Al clicar en “Box X”
   // ——————————————————————————————
-  boxLinks.forEach((link) => {
-    link.addEventListener("click", async (ev) => {
-      ev.preventDefault();
+boxLinks.forEach((link) => {
+  link.addEventListener("click", async (ev) => {
+    ev.preventDefault();
 
-      // 0) Marcado visual: quitar “active” de todos y añadir al clicado
-      boxLinks.forEach((l) => l.classList.remove("active"));
-      console.log(link);
-      link.classList.add("active");
-      // Rellena el número
-      document.getElementById("box-indicador-num").textContent = boxNumber;
+    // 1) Leo el número de box desde el atributo data antes de todo
+    const boxNumber = link.getAttribute("data-box");
+    if (!boxNumber) return;
 
-      // Muestra el recuadro (paso de display: none → block)
-      const indicador = document.getElementById("box-indicador-flotante");
-      indicador.style.display = "block";
+    // 2) Marcado visual: quito “active” de todos y lo añado al clicado
+    boxLinks.forEach((l) => l.classList.remove("active"));
+    link.classList.add("active");
 
-      // 1) Guardar el Box anterior…
-      const prevBox = selectedBoxElement?.getAttribute("data-current-box");
-      if (prevBox) await saveCurrentBoxData(prevBox);
+    // 3) Actualizo y muestro el indicador flotante
+    const indicador = document.getElementById("box-indicador-flotante");
+    document.getElementById("box-indicador-num").textContent = boxNumber;
+    indicador.style.display = "block";
 
-      // 2) Cargar datos del nuevo Box
-      const boxNumber = link.getAttribute("data-box");
-      if (!boxNumber) return;
-      await loadBoxData(boxNumber);
+    // 4) Guardar el Box anterior (si existía)
+    const prevBox = selectedBoxElement?.getAttribute("data-current-box");
+    if (prevBox) {
+      await saveCurrentBoxData(prevBox);
+    }
 
-      // 3) Mostrar mensaje y almacenar número actual
-      selectedBoxElement.textContent = `Has seleccionado el Box ${boxNumber}`;
-      selectedBoxElement.setAttribute("data-current-box", boxNumber);
-      boxSeleccionado = true;
+    // 5) Cargo datos del box nuevo
+    await loadBoxData(boxNumber);
 
-      // 4) Habilitar inputs y recalcular…
-      pesoInput.disabled = false;
-      horasDesdeIngresoInput.disabled = false;
-      verificarHabilitacion();
-      calculateDerivedValues();
-      updateMainDeleteButtonText();
-    });
+    // 6) Actualizo el texto y estado interno
+    selectedBoxElement.textContent = `Has seleccionado el Box ${boxNumber}`;
+    selectedBoxElement.setAttribute("data-current-box", boxNumber);
+    boxSeleccionado = true;
+
+    // 7) Habilito inputs y recalculo todo
+    pesoInput.disabled = false;
+    horasDesdeIngresoInput.disabled = false;
+    verificarHabilitacion();
+    calculateDerivedValues();
+    updateMainDeleteButtonText();
   });
+});
+
 
   // ——————————————————————————————
   // 8) Cada vez que cambie cualquier input, volvemos a calcular

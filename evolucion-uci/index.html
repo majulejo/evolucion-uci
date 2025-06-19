@@ -1,4 +1,5 @@
 <?php
+date_default_timezone_set('Europe/Madrid');
 // limpiar caché
 
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
@@ -342,44 +343,53 @@ header('Expires: 0');
 
 
   <!-- LOGIN SCRIPT -->
-  <script>
-    // Mostrar / Ocultar contraseña
-    document.getElementById('togglePass').addEventListener('change', e => {
-      document.getElementById('clave').type = e.target.checked ? 'text' : 'password';
-    });
+ <script>
+const errDiv = document.getElementById('errorMensaje'); // ✅ Añade esta línea
 
-    // Envío del formulario
-    document.getElementById('loginForm').addEventListener('submit', async function(e) {
-      e.preventDefault();
-      const usuario = document.getElementById('usuario').value.trim();
-      const clave   = document.getElementById('clave').value.trim();
-      const errDiv  = document.getElementById('errorMensaje');
-      errDiv.textContent = '';
-
-      if (!usuario || !clave) {
-        errDiv.textContent = 'Ambos campos son obligatorios.';
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const usuario = document.getElementById('usuario').value.trim();
+    const clave = document.getElementById('clave').value.trim();
+    
+    if (!usuario || !clave) {
+        document.getElementById('errorMensaje').textContent = 'Ambos campos son obligatorios.';
         return;
-      }
+    }
 
-      try {
-        const res  = await fetch('login2.php', {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({ usuario, clave })
+    try {
+        const res = await fetch('login2.php', {
+            method: 'POST',
+            credentials: 'include', // Cambiado de same-origin a include
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ usuario, clave })
         });
-        const data = await res.json();
-
-        if (data.success) {
-          window.location.href = 'app.php';
-        } else {
-          errDiv.textContent = data.message || 'Credenciales incorrectas.';
+        
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
         }
-      } catch (err) {
-        console.error(err);
-        errDiv.textContent = 'Error de conexión.';
-      }
-    });
+        
+        const data = await res.json();
+        console.log('Respuesta del servidor:', data);
+        
+        if (data.success) {
+            // Redirigir basado en la respuesta del servidor
+            window.location.href = data.redirect || 'app.php';
+        } else {
+            document.getElementById('errorMensaje').textContent = data.message || 'Error de autenticación';
+        }
+    } catch (err) {
+        console.error('Error en la solicitud:', err);
+        document.getElementById('errorMensaje').textContent = 'Error de conexión con el servidor';
+    }
+});
+
+
+
+// Mostrar / Ocultar contraseña
+document.getElementById('togglePass').addEventListener('change', e => {
+    document.getElementById('clave').type = e.target.checked ? 'text' : 'password';
+});
+</script>
   </script>
 
 </body>

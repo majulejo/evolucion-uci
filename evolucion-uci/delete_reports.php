@@ -1,5 +1,6 @@
 <?php
 // delete_reports.php
+
 date_default_timezone_set('Europe/Madrid');
 session_start();
 header('Content-Type: application/json; charset=utf-8');

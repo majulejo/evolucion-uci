@@ -319,18 +319,18 @@ if (!isset($_SESSION['user_id'])) {
 
 /* INDICADOR FLOTANTE (a la izquierda) */
 #box-indicador-flotante {
-  position: fixed;
+  position: absolute;
   left: 2%;
-  top: 40px;
-  z-index: 1600;
+  top: 25px;
+  z-index: 1000;
   display: none;
-  padding: 6px 12px;
-  font-size: 16px;
+  padding: 4px 10px;
+  font-size: 13px;
   font-weight: bold;
-  color: var(--fuente);
-  border: 2px solid var(--fuente);
+  color: #ffffff;
+  border: 2px solid #ffffff;
   border-radius: 10px;
-  background-color: #fff;
+  background-color: transparent;
   box-sizing: border-box;
   transition: top 0.3s ease;
   white-space: nowrap;
@@ -789,7 +789,7 @@ if (!isset($_SESSION['user_id'])) {
   #resultado {
     position: absolute !important;
     left: 3cm !important;
-    right: 1.5cm !important;
+    right: 2cm !important;
     padding: 0 !important;
     margin: 0 !important;
     background: white !important;
@@ -866,6 +866,40 @@ if (!isset($_SESSION['user_id'])) {
   #logoutBtn span{display:none;}
 }
 
+/* GOMA  Y FIRMA */
+.input-wrapper {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+.input-wrapper .clear-btn {
+  position: absolute;
+  right: 8px;
+  top: 6px;
+  background-color: transparent;
+  border: none;
+  color: #888;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 5px;
+  z-index: 10;
+  transition: color 0.3s ease;
+}
+
+.input-wrapper .clear-btn:hover {
+  color: var(--pantone);
+}
+
+/* Ajuste en móviles */
+@media (max-width: 768px) {
+  .input-wrapper .clear-btn {
+    font-size: 12px;
+    right: 4px;
+    top: 4px;
+  }
+}
+
   </style>
 </head>
 
@@ -889,9 +923,8 @@ if (!isset($_SESSION['user_id'])) {
 </div>
 
 <!-- Indicador discreto flotante -->
-<div id="box-indicador-flotante">
-  <span id="numero-box-seleccionado-fijo"></span>
-</div>
+<!-- Indicador flotante -->
+<div id="box-indicador-flotante">Box <span id="numero-box-seleccionado-fijo"></span></div>
 
 
   <div id="mensajeConfirmacion"></div>
@@ -928,14 +961,39 @@ if (!isset($_SESSION['user_id'])) {
       <label for="piel">8. PIEL</label>
       <textarea id="piel" disabled></textarea>
     </div>
-    <div class="campo">
-      <label for="otros">9. OTROS</label>
-      <textarea id="otros" disabled></textarea>
-    </div>
-    <div class="campo">
-      <label for="especial">10. ESPECIAL VIGILANCIA</label>
-      <textarea id="especial" disabled></textarea>
-    </div>
+    <!-- Campo 9 -->
+<div class="campo">
+  <label for="otros">9. OTROS</label>
+  <div class="input-wrapper">
+    <textarea id="otros" disabled></textarea>
+    <button class="clear-btn" onclick="limpiarCampo('otros')">
+      <i class="fas fa-trash-alt"></i>
+    </button>
+  </div>
+</div>
+
+<!-- Campo 10 -->
+<div class="campo">
+  <label for="especial">10. ESPECIAL VIGILANCIA</label>
+  <div class="input-wrapper">
+    <textarea id="especial" disabled></textarea>
+    <button class="clear-btn" onclick="limpiarCampo('especial')">
+      <i class="fas fa-trash-alt"></i>
+    </button>
+  </div>
+</div>
+
+<!-- Campo Firma -->
+<div class="campo">
+  <label for="firma">FIRMA</label>
+  <div class="input-wrapper">
+    <textarea id="firma" disabled></textarea>
+    <button class="clear-btn" onclick="limpiarCampo('firma')">
+      <i class="fas fa-trash-alt"></i>
+    </button>
+  </div>
+</div>
+       
 
     <div class="contador-global">
       <strong>Total de caracteres utilizados:</strong>
@@ -1011,8 +1069,7 @@ if (!isset($_SESSION['user_id'])) {
   <!-- ==================   JS principal   ================== -->
 
   <script>
-      
-   // Variables globales
+// Variables globales
 let selectedBox = null;
 let currentUserId = null;
 let currentInformeId = null;
@@ -1022,40 +1079,67 @@ const DEBOUNCE_MS = 800;
 const campos = [
   "neurologico", "cardiovascular", "respiratorio", "renal",
   "gastrointestinal", "nutricional", "termorregulacion",
-  "piel", "otros", "especial"
+  "piel", "otros", "especial", "firma"
 ];
 
-// Función para eliminar el draft
-async function eliminarDraft() {
-  if (!selectedBox) {
-    console.error("No se ha seleccionado ningún box.");
-    return;
-  }
+//========================
 
+// FIRMA Y GOMA
+function limpiarCampo(id) {
+  const campo = document.getElementById(id);
+  if (campo && confirm("¿Seguro que desea eliminar el contenido?")) {
+    campo.value = "";
+    actualizarContadorTotal();
+    saveDraft(); // Guardar draft actualizado
+  }
+}
+
+// ==============================
+    // Funciones auxiliares
+    // ==============================
+
+    function limpiarCampos() {
+        campos.forEach(id => {
+            const campo = document.getElementById(id);
+            if (campo) {
+                campo.value = "";
+            }
+        });
+    }
+    
+
+
+
+// Función para eliminar el draft
+async function eliminarDraft(boxNumber) {
   try {
     const response = await fetch('clear_draft.php', {
       method: 'POST',
       credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ box: selectedBox })
+      body: JSON.stringify({ box: boxNumber })
     });
     const data = await response.json();
-    console.log("Respuesta del servidor al eliminar draft:", data);
-
-    if (!data.success) {
-      throw new Error(data.message);
-    }
+    if (!data.success) throw new Error(data.message || "Error al eliminar");
   } catch (error) {
     console.error("Error al eliminar draft:", error.message);
   }
 }
 
+    deshabilitarCampos(); // Bloquea todos los campos inicialmente
 
-//=======================================================================
-// Evento DOMContentLoaded
+// Función para limpiar datos iniciales
+async function limpiarDatosIniciales() {
+  if (!currentUserId) return;
+
+  for (let i = 1; i <= 12; i++) {
+    sessionStorage.removeItem(`autosave_${currentUserId}_box${i}`);
+    await eliminarDraft(i);
+  }
+}
+
+// Listener DOMContentLoaded
 document.addEventListener("DOMContentLoaded", async () => {
-  console.log("DOM cargado. Generando botones Box...");
-
   const boxSelector = document.getElementById("boxSelector");
   if (!boxSelector) {
     console.error("Elemento #boxSelector no encontrado.");
@@ -1069,10 +1153,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     boxSelector.appendChild(btn);
   }
 
-  console.log("Botones Box generados.");
-
   // Deshabilitar campos inicialmente
-  deshabilitarCampos();
+  campos.forEach(campoId => {
+    const textarea = document.getElementById(campoId);
+    if (textarea) {
+      textarea.disabled = true;
+      textarea.placeholder = "Seleccione un Box o informe guardado";
+    }
+  });
 
   // Verificar sesión
   try {
@@ -1085,6 +1173,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     currentUserId = d.user_id;
     sessionStorage.setItem('currentUserId', currentUserId);
+
+    await limpiarDatosIniciales();
+
     document.getElementById("contenidoApp").style.display = "block";
     cargarListadoInformesGuardados();
   } catch (error) {
@@ -1092,36 +1183,41 @@ document.addEventListener("DOMContentLoaded", async () => {
     sessionStorage.removeItem("currentUserId");
     window.location.href = "index.html";
   }
-      cargarListadoInformesGuardados();
 
-    // conecta los listeners de autosave
-    attachAutosaveListeners();
+  // Conectar listeners de autosave
+  function attachAutosaveListeners() {
+    let autosaveTimer;
+    campos.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener('input', () => {
+        clearTimeout(autosaveTimer);
+        autosaveTimer = setTimeout(saveDraft, DEBOUNCE_MS);
+      });
+    });
+  }
 
-    // si había un box abierto la última vez, recárgalo:
-    const last = sessionStorage.getItem('lastSelectedBox');
-    if (last) selectBox(parseInt(last, 10));
-  });
-
-// Resto de funciones...
+  attachAutosaveListeners();
+      deshabilitarCampos(); // Bloquea todos los campos inicialmente
 
 
-
+  // Cargar último Box seleccionado si existe
+  const last = sessionStorage.getItem('lastSelectedBox');
+  if (last) selectBox(parseInt(last, 10));
+});
 
 //===========================================================
 
-// Definición de cerrarSesion
 // ====== Función Cerrar Sesión ======
-  function cerrarSesion() {
+ function cerrarSesion() {
     if (currentUserId) {
-      Object.keys(sessionStorage)
-        .filter(k => k.startsWith(`autosave_${currentUserId}_`))
-        .forEach(k => sessionStorage.removeItem(k));
+        Object.keys(sessionStorage)
+            .filter(k => k.startsWith(`autosave_${currentUserId}_`))
+            .forEach(k => sessionStorage.removeItem(k));
     }
     sessionStorage.removeItem("currentUserId");
     window.location.href = "index.html";
-  }
-  
-// Resto de funciones...
+}
 
 //===================================================
 
@@ -1156,19 +1252,7 @@ function saveLocal(boxNumber) {
 
 //==========================================
 
- // 3) El autosave propiamente (ya lo tienes, sólo falta activarlo)
-  function attachAutosaveListeners() {
-    let autosaveTimer;
-    campos.forEach(id => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.addEventListener('input', () => {
-        actualizarContadorTotal();
-        clearTimeout(autosaveTimer);
-        autosaveTimer = setTimeout(saveDraft, DEBOUNCE_MS);
-      });
-    });
-  }
+ 
   
   
   //====================================================
@@ -1178,12 +1262,12 @@ async function saveDraft() {
     const datos = {};
     campos.forEach(id => datos[id] = document.getElementById(id).value);
     await fetch('save_draft.php', {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ box: selectedBox, datos })
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ box: selectedBox, datos })
     });
-  }
+}
 
 //==========================================
 
@@ -1211,61 +1295,78 @@ async function saveDraft() {
 
 //===================================================
 
-
-function habilitarCampos() {
-  campos.forEach(campoId => {
-    const textarea = document.getElementById(campoId);
-    if (textarea) {
-      textarea.disabled = false;
-      textarea.placeholder = "";
-    } else {
-      console.warn(`Elemento con ID ${campoId} no encontrado.`);
-    }
-    document.getElementById("box-indicador-flotante").style.display = "none";
-  });
+    function habilitarCampos() {
+    campos.forEach(campoId => {
+        const textarea = document.getElementById(campoId);
+        if (textarea) {
+            textarea.disabled = false;
+            textarea.placeholder = ""; // Eliminar placeholder si existe
+        }
+    });
 }
-
 
 //===================================================
 
 function deshabilitarCampos() {
-    document.getElementById("box-indicador-flotante").style.display = "none";
-  campos.forEach(campoId => {
-    const textarea = document.getElementById(campoId);
-    if (textarea) {
-      textarea.disabled = true;
-      textarea.placeholder = "Seleccione un Box o informe guardado";
-    }
-  });
+    campos.forEach(campoId => {
+        const textarea = document.getElementById(campoId);
+        if (textarea) {
+            textarea.disabled = true;
+            textarea.placeholder = "Seleccione un Box o informe guardado";
+        }
+    });
 }
 
 //===================================================
 
-    
-    async function borrarDatos() {
-  if (!currentUserId || !selectedBox) {
-    console.error("No hay usuario o box seleccionado");
-    return;
-  }
-  // 1) Limpio campos y localStorage
-  campos.forEach(c => document.getElementById(c).value = "");
-  sessionStorage.removeItem(`autosave_${currentUserId}_box${selectedBox}`);
 
-  // 2) Borro draft en servidor
-  try {
-    const res = await fetch('clear_draft.php', {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ box: selectedBox })
-    });
-    const data = await res.json();
-    if (!data.success) throw new Error(data.message);
-    console.log("Draft borrado en servidor");
-  } catch (err) {
-    console.error("Error borrando draft:", err);
-  }
+function mostrarIndicadorBox(boxNumber) {
+    let indicador = document.getElementById("box-indicador-flotante");
+    if (!indicador) {
+        indicador = document.createElement("div");
+        indicador.id = "box-indicador-flotante";
+        document.body.appendChild(indicador);
+    }
+    indicador.textContent = `Box ${boxNumber} seleccionado`;
+    indicador.style.display = "block";
+
+    setTimeout(() => {
+        indicador.style.display = "none";
+    }, 3000);
 }
+
+// ========================================
+    
+  async function borrarDatos() {
+    if (!currentUserId || !selectedBox) {
+        console.error("No hay usuario o box seleccionado");
+        return;
+    }
+    // Limpio campos y localStorage
+    campos.forEach(c => document.getElementById(c).value = "");
+    sessionStorage.removeItem(`autosave_${currentUserId}_box${selectedBox}`);
+    // Borro draft en servidor
+    try {
+        const res = await fetch('clear_draft.php', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ box: selectedBox })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message);
+        console.log("Draft borrado en servidor");
+    } catch (err) {
+        console.error("Error borrando draft:", err);
+    }
+    // Oculta el indicador flotante
+    const indicador = document.getElementById("box-indicador-flotante");
+    if (indicador) {
+        indicador.style.display = "none";
+    }
+}
+
+
 //===================================================
 
   
@@ -1332,129 +1433,154 @@ function clonarInforme() {
 //===================================================
     // 2) Generar o actualizar un informe
     
- async function generarInforme() {
-  if (!selectedBox || !currentUserId) {
-    return alert("Selecciona un Box y asegúrate de estar autenticado.");
-  }
-
-  currentInformeId = crypto.randomUUID();
-
-  // Recoger valores
-  const datos = {};
-  campos.forEach(c => {
-    datos[c] = document.getElementById(c).value.trim() || '';
-  });
-
-  // Previsualizar
-  const html = generarTextoDesdeDatos(datos);
-  const divRes = document.getElementById('resultado');
-  divRes.innerHTML = html;
-  divRes.style.display = 'block';
-  document.getElementById('copiarInformeBtn').style.display = 'inline-block';
-
-  try {
-    // Guardar en reports
-    const res = await fetch("save_report.php", {
-      method: "POST",
-      credentials: 'same-origin',
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id: currentInformeId,
-        user_id: currentUserId,
-        box: selectedBox,
-        datos,
-        timestamp: new Date().toISOString()
-      })
-    });
-    const d = await res.json();
-
-    if (d.success) {
-      alert("Informe generado/actualizado con éxito.");
-      // Ya no borramos el draft aquí
-      cargarListadoInformesGuardados();
-      currentInformeId = d.id || currentInformeId;
-    } else {
-      console.warn("Error al guardar informe:", d.message);
-      alert("Error guardando el informe.");
+async function generarInforme() {
+    if (!selectedBox || !currentUserId) {
+        return alert("Selecciona un Box y asegúrate de estar autenticado.");
     }
-  } catch (err) {
-    console.error("Error en generarInforme():", err);
-    alert("No se pudo conectar con el servidor.");
-  }
+
+    try {
+        // Si ya hay un informe cargado, usamos ese ID, sino creamos uno nuevo
+        currentInformeId = currentInformeId || crypto.randomUUID();
+        
+        const datos = {};
+        campos.forEach(c => datos[c] = document.getElementById(c).value.trim() || '');
+        
+        // Generar y mostrar el HTML inmediatamente
+        const html = generarHTMLDesdeDatos(datos);
+        const divRes = document.getElementById('resultado');
+        divRes.innerHTML = html;
+        divRes.style.display = 'block';
+        document.getElementById('copiarInformeBtn').style.display = 'inline-block';
+
+        const response = await fetch("save_report.php", {
+            method: "POST",
+            credentials: 'same-origin',
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                id: currentInformeId,
+                user_id: currentUserId,
+                box: selectedBox,
+                datos: datos,
+                timestamp: new Date().toISOString()
+            })
+        });
+
+        const d = await response.json();
+        if (d.success) {
+            alert("Informe generado/actualizado con éxito.");
+            cargarListadoInformesGuardados();
+            currentInformeId = d.id || currentInformeId;
+        } else {
+            console.warn("Error al guardar informe:", d.message);
+            alert("Error guardando el informe.");
+        }
+    } catch (err) {
+        console.error("Error en generarInforme():", err);
+        alert("No se pudo conectar con el servidor.");
+    }
 }
 
-   
-   
+
+
+
 //-------------------------------------------
+
+
 // En la función selectBox():
 
 async function selectBox(boxNumber) {
-  // 1) Si veníamos de otro box, lo salvamos
-  if (selectedBox) {
+    if (!currentUserId) {
+        alert("Usuario no autenticado.");
+        return;
+    }
+
+    // Limpiar campos antes de cargar nuevos datos
+    limpiarCampos();
+
+    // Guardar borrador actual (si hubiera)
     await saveDraft();
-  }
 
-  // 2) Actualizo la caja seleccionada
-  selectedBox = boxNumber;
-  sessionStorage.setItem('lastSelectedBox', boxNumber);
+    selectedBox = boxNumber;
+    sessionStorage.setItem("lastSelectedBox", boxNumber);
 
-  // 3) UI: botón activo, mensaje, habilitar campos…
-  document
-    .querySelectorAll(".box-selector button")
-    .forEach(btn => btn.classList.remove("active"));
-  document
-    .querySelector(`.box-selector button:nth-child(${boxNumber})`)
-    .classList.add("active");
+    // Mostrar indicador visual del Box seleccionado
+    mostrarIndicadorFlotante(boxNumber); // Llamada correcta
+    
+    // Habilitar campos (ahora se habilitan siempre al seleccionar un box)
+    habilitarCampos();
 
-  document.getElementById("numero-box-seleccionado-msg").textContent = boxNumber;
-  document.getElementById("mensaje-box-seleccionado").style.display = "block";
-  document.getElementById("numero-box-seleccionado-fijo").textContent = boxNumber;
-document.getElementById("box-indicador-flotante").style.display = "block";
 
-  habilitarCampos();
-  attachAutosaveListeners();
-
-  // 4) Intento cargar borrador
-  try {
-    const res = await fetch(`get_draft.php?box=${boxNumber}`, {
-      credentials: "same-origin"
-    });
-    const js = await res.json();
-    if (js.success && js.datos) {
-      campos.forEach(id => {
-        document.getElementById(id).value = js.datos[id] || "";
-      });
-      actualizarContadorTotal();
-      return; // ya cargamos borrador, salimos
+    // Cargar borrador local
+    const draftLocal = sessionStorage.getItem(`autosave_${currentUserId}_box${boxNumber}`);
+    if (draftLocal) {
+        try {
+            const datos = JSON.parse(draftLocal);
+            campos.forEach(id => {
+                const campo = document.getElementById(id);
+                if (campo && datos[id]) {
+                    campo.value = datos[id];
+                }
+            });
+            habilitarCampos();
+            return;
+        } catch (e) {
+            console.warn("Error al leer borrador local:", e);
+        }
     }
-  } catch (e) {
-    console.warn("No se pudo cargar borrador:", e);
-  }
 
-  // 5) Si no hay borrador, cargo el último informe
-  try {
-    const res2 = await fetch(`get_latest_report.php?box=${boxNumber}`, {
-      credentials: "same-origin"
-    });
-    const data = await res2.json();
-    if (data.success) {
-      currentInformeId = data.id;
-      currentInformeBox = boxNumber;
-      campos.forEach(id => {
-        document.getElementById(id).value = data.datos[id] || "";
-      });
-      actualizarContadorTotal();
-      return;
+    // Cargar borrador del servidor
+    try {
+        const res = await fetch(`get_draft.php?box=${boxNumber}`, {
+            credentials: "same-origin"
+        });
+        const js = await res.json();
+        if (js.success && js.datos) {
+            campos.forEach(id => {
+                const campo = document.getElementById(id);
+                if (campo) {
+                    campo.value = js.datos[id] || "";
+                }
+            });
+            habilitarCampos();
+            return;
+        }
+    } catch (e) {
+        console.warn("Error al cargar borrador del servidor:", e);
     }
-  } catch (e) {
-    console.error("No pudo cargar último informe:", e);
-  }
 
-  // 6) Si no hay nada, limpio campos para nuevo draft
-  currentInformeId = null;
-  borrarDatos();
+    // Intentar cargar último informe
+    try {
+        const res2 = await fetch(`get_latest_report.php?box=${boxNumber}`, {
+            credentials: "same-origin"
+        });
+        
+        // Verificar si la respuesta está vacía
+        if (!res2.ok || res2.status === 204) {
+            console.log("No hay último informe o respuesta vacía");
+            currentInformeId = null;
+            deshabilitarCampos();
+            return;
+        }
+        
+        const data = await res2.json();
+        if (data.success) {
+            currentInformeId = data.id;
+            currentInformeBox = boxNumber;
+            campos.forEach(id => {
+                const campo = document.getElementById(id);
+                if (campo) {
+                    campo.value = data.datos[id] || "";
+                }
+            });
+            habilitarCampos();
+        }
+    } catch (e) {
+        console.error("Error al cargar último informe:", e);
+        // Continuar con campos vacíos
+        currentInformeId = null;
+        deshabilitarCampos();
+    }
 }
-
 
 
 
@@ -1499,157 +1625,178 @@ document.getElementById("box-indicador-flotante").style.display = "block";
   }
 }
 
+// ==============================================
 
+async function saveReport() {
+    if (!selectedBox || !currentUserId) return;
 
-
-function saveReport() {
-  // 1) Si no hay Box seleccionado o user, nada
-  if (!selectedBox || !currentUserId) return;
-
-  // 2) Construye el objeto datos
-  const datos = {};
-  campos.forEach(id => {
-    const ta = document.getElementById(id);
-    if (ta) datos[id] = ta.value.trim();
-  });
-
-  // 3) Prepara el payload
-  if (!currentUserId || !selectedBox) {
-  console.error("Faltan datos necesarios para guardar el informe.");
-  return;
-}
-  const payload = {
-    id:        currentInformeId,        // puede ser null la primera vez
-    user_id:   currentUserId,
-    box:       selectedBox,
-    datos:     datos,
-    timestamp: new Date().toISOString()
-  };
-
-  // 4) Envío al servidor
-  fetch('save_report.php', {
-  method: 'POST',
-  credentials: 'same-origin',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(payload)
-})
-    .then(r => r.json())
-    .then(d => {
-      if (d.success) {
-        // si el servidor devolvió un id nuevo, guárdalo
-        currentInformeId = d.id || currentInformeId;
-        console.info('Autosave ok:', currentInformeId);
-      } else {
-        console.warn('Autosave fallo:', d.message);
-      }
-    })
-    .catch(err => {
-      console.error('Error autosave:', err);
+    const datos = {};
+    campos.forEach(id => {
+        const ta = document.getElementById(id);
+        if (ta) datos[id] = ta.value.trim();
     });
+
+    const payload = {
+        id: currentInformeId,
+        user_id: currentUserId,
+        box: selectedBox,
+        datos: datos,
+        timestamp: new Date().toISOString()
+    };
+
+    try {
+        const res = await fetch('save_report.php', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+        if (json.success) {
+            currentInformeId = json.id || currentInformeId;
+            console.info("Informe guardado con éxito:", currentInformeId);
+            alert("Informe guardado exitosamente.");
+            cargarListadoInformesGuardados();
+        } else {
+            console.warn("Error al guardar informe:", json.message);
+            alert("Error guardando el informe: " + json.message);
+        }
+    } catch (err) {
+        console.error("Error en saveReport():", err);
+        alert("No se pudo conectar con el servidor.");
+    }
 }
 
-
+// ==============================================
 
 
 // 1) Listar todos los informes guardados en el <select>
-async function cargarListadoInformesGuardados() {
-  try {
-    const res = await fetch('list_reports.php', {
-      credentials: 'same-origin'
-    });
-    const data = await res.json();
-    console.log("Respuesta de list_reports.php:", data); // DEBUG
-    if (Array.isArray(data.reports)) {
-      const select = document.getElementById('informesGuardados');
-      select.innerHTML = '<option value="">Seleccione un informe...</option>';
-      data.reports.forEach(informe => {
-        const option = document.createElement('option');
-        option.value = informe.id;
-        option.textContent = `[Box ${informe.box}] ${new Date(informe.fecha).toLocaleString()} – ${informe.hora}`;
-        select.appendChild(option);
-      });
-    } else {
-      console.warn("La respuesta de list_reports.php no es un array:", data);
-    }
-  } catch (e) {
-    console.error("Error al cargar listado:", e);
-  }
-}
 
 
-async function cargarInformeDesdeLista(sel) {
-  const id = sel.value;
-  if (!id) {
-    borrarDatos();
-    return;
-  }
-  try {
-    const res = await fetch(`get_report.php?id=${encodeURIComponent(id)}`, {
-      credentials: 'same-origin'
-    });
-    const json = await res.json();
-    if (!json.success) {
-      return alert(json.message || "Informe no encontrado");
-    }
-
-    // Rellenar campos
-    currentInformeId = json.id;
-    selectedBox = json.box;
-    habilitarCampos();
-    campos.forEach(c => {
-      document.getElementById(c).value = json.datos[c] || "";
-    });
-    actualizarContadorTotal();
-
-    // Marcar botón de box activo
-    document.querySelectorAll(".box-selector button").forEach(b => b.classList.remove("active"));
-    document.querySelector(`.box-selector button:nth-child(${json.box})`).classList.add("active");
-
-    // Previsualización
-    const html = generarHTMLDesdeDatos(json.datos);
-    const div = document.getElementById("resultado");
-    div.innerHTML = html;
-    div.style.display = "block";
-    document.getElementById("copiarInformeBtn").style.display = "inline-block";
-
-    // Guardar como draft
-    await saveDraft();
-  } catch (err) {
-    console.error("Error en fetch get_report.php:", err);
-    alert("Error de conexión o servidor.");
-  }
+function cargarListadoInformesGuardados() {
+  fetch('list_reports.php', { credentials: 'same-origin' })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success && Array.isArray(data.reports)) {
+        const select = document.getElementById('informesGuardados');
+        select.innerHTML = '<option value="">Seleccione un informe...</option>';
+        
+        data.reports.forEach(informe => {
+          const option = document.createElement('option');
+          option.value = informe.id;
+          
+          // Mostrar "Recién guardado" si no hay fecha
+          if (!informe.fecha || !informe.hora || informe.fecha.includes('Sin')) {
+            option.textContent = `Box ${informe.box} - Recién guardado`;
+          } else {
+            option.textContent = `Box ${informe.box} - ${informe.fecha} ${informe.hora}`;
+          }
+          
+          select.appendChild(option);
+        });
+      }
+    })
+    .catch(error => console.error('Error al cargar listado:', error));
 }
 
 
 
+// ==============================================
 
-async function loadReport(id) {
+
+    async function cargarInformeDesdeLista(sel) {
+    const id = sel.value;
+    if (!id) return;
+    
+    try {
+        const response = await fetch(`get_report.php?id=${encodeURIComponent(id)}`, {
+            credentials: 'same-origin'
+        });
+        
+        if (!response.ok) throw new Error('Error de red');
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+            console.error('Error del servidor:', data.message);
+            alert(data.message || 'Error al cargar el informe');
+            return;
+        }
+        
+        // Habilitar TODOS los campos primero
+        habilitarCampos();
+        
+        // Luego rellenar los campos con los datos
+        campos.forEach(campoId => {
+            const textarea = document.getElementById(campoId);
+            if (textarea && data.datos[campoId]) {
+                textarea.value = data.datos[campoId];
+            }
+        });
+        
+        // Actualizar variables de estado
+        selectedBox = data.box;
+        currentInformeId = data.id;
+        currentInformeBox = data.box;
+        
+        // Generar y mostrar el HTML del informe
+        const html = generarHTMLDesdeDatos(data.datos);
+        const resultadoDiv = document.getElementById('resultado');
+        resultadoDiv.innerHTML = html;
+        resultadoDiv.style.display = 'block';
+        
+        // Mostrar botón de copiar
+        document.getElementById('copiarInformeBtn').style.display = 'inline-block';
+        
+        // Mostrar el Box seleccionado
+        mostrarIndicadorFlotante(data.box);
+        document.getElementById('numero-box-seleccionado-msg').textContent = data.box;
+        document.getElementById('mensaje-box-seleccionado').style.display = 'block';
+        
+        // Actualizar contador de caracteres
+        actualizarContadorTotal();
+        
+        // Forzar redibujado del navegador (solución para algunos navegadores)
+        resultadoDiv.style.display = 'none';
+        setTimeout(() => {
+            resultadoDiv.style.display = 'block';
+        }, 50);
+        
+    } catch (error) {
+        console.error('Error al cargar informe:', error);
+        alert('No se pudo cargar el informe. Por favor, inténtalo de nuevo.');
+    }
+}
+
+
+
+// =====================================================
+
+    async function loadReport(id) {
   try {
     const response = await fetch(`get_report.php?id=${id}`);
     const data = await response.json();
 
-    console.log("Datos recibidos:", data); // Verifica la respuesta
-
     if (data.success) {
+      // Habilitar TODOS los campos primero
       habilitarCampos();
+      
+      // Luego cargar los datos
       const datos = data.data;
-
       campos.forEach(campoId => {
         const textarea = document.getElementById(campoId);
-        if (textarea) {
+        if (textarea && datos[campoId]) {
           textarea.value = datos[campoId] || '';
-        } else {
-          console.error(`El textarea con ID ${campoId} no existe.`);
         }
       });
 
-      // Actualizar contador y otros estados
-      actualizarContadorTotal();
+      // Actualizar estado
       selectedBox = data.box;
       currentInformeId = id;
       currentInformeBox = data.box;
 
-      // Actualizar estado visual
+      // Actualizar UI
+      actualizarContadorTotal();
       document.querySelectorAll('.box-selector button').forEach(b => b.classList.remove('active'));
       document.querySelector(`.box-selector button:nth-child(${data.box})`).classList.add('active');
       document.getElementById('numero-box-seleccionado-msg').textContent = data.box;
@@ -1667,28 +1814,27 @@ async function loadReport(id) {
 }
 
 
+// ================================================
+
 
     
+   function generarHTMLDesdeDatos(datos) {
+    const h = new Date().getHours();
+    const turno = (h >= 8 && h < 20) ? 'Turno de 8 a 20 horas' : 'Turno de 20 a 8 horas';
     
-    function generarHTMLDesdeDatos(datos) {
-  const h = new Date().getHours();
-  const turno = (h >= 8 && h < 20) ? 'Turno de 8 a 20 horas' : 'Turno de 20 a 8 horas';
-  
-  let html = `<p class="cabecera">BOX ${selectedBox} – ${turno}</p>`;
-  
-  campos.forEach(campoId => {
-    const etiqueta = document.querySelector(`label[for='${campoId}']`).innerText;
-    const valor = datos[campoId]?.trim() || '<span class="no-especificado">Sin especificar</span>';
-    html += `<p><span class="label-strong">${etiqueta}:</span> ${valor}</p>`;
-  });
+    let html = `<p class="cabecera">BOX ${selectedBox} – ${turno}</p>`;
+    
+    campos.forEach(campoId => {
+        const etiqueta = document.querySelector(`label[for='${campoId}']`).innerText;
+        const valor = datos[campoId]?.trim() || '<span class="no-especificado">Sin especificar</span>';
+        html += `<p><span class="label-strong">${etiqueta}:</span> ${valor}</p>`;
+    });
 
-  return html;
+    return html;
 }
-    // fin de generarHTMLDesdeDatos(datos) 
 
 
-
-
+// ================================================
 
     function imprimirAuto() {
       imprimir(false);
@@ -1698,6 +1844,7 @@ async function loadReport(id) {
       imprimir(true);
     }
 
+// ================================================
 
 
     function prepararYImprimir(esTurnoDiurno) {
@@ -1768,6 +1915,17 @@ async function eliminarInformesDeBox() {
 }
 
 
+//====================================
+
+function mostrarIndicadorFlotante(boxNumber) {
+    const indicador = document.getElementById("box-indicador-flotante");
+    if (indicador && boxNumber !== undefined) {
+        indicador.textContent = `Box-${boxNumber}`;
+        indicador.style.display = "block"; // Aseguramos que esté visible
+    }
+}
+//==================================================
+
 
 
 //actualiza su posición al hacer scroll:
@@ -1786,6 +1944,10 @@ function actualizarPosicionBoxIndicador() {
 window.addEventListener("scroll", actualizarPosicionBoxIndicador);
 window.addEventListener("resize", actualizarPosicionBoxIndicador);
 
+// =================================================
+
+
+// =================================================
 
 
 function imprimir(turnoAlternativo = false) {
@@ -1818,12 +1980,33 @@ function imprimir(turnoAlternativo = false) {
   window.print();
 }
 
-// ——————————————————————
-  // 4) Antes de salir de la pestaña, intento un último saveDraft
-  window.addEventListener('beforeunload', () => {
-    if (selectedBox && currentUserId) saveDraft();
-  });
+//=======================================
+// === Temporizador de inactividad ===
+let inactivityTime = function () {
+    let time;
+    window.onload = resetTimer;
+    document.onmousemove = resetTimer;
+    document.onkeypress = resetTimer;
+    document.onscroll = resetTimer;
+    document.onclick = resetTimer;
 
-        </script>
-    </body>
+    function logout() {
+        alert("Sesión cerrada por inactividad.");
+        window.location.href = "logout.php";
+    }
+
+    function resetTimer() {
+        clearTimeout(time);
+        time = setTimeout(logout, 300000); // 5 minutos = 300000 ms
+    }
+};
+inactivityTime();
+// ——————————————————————
+// 4) Antes de salir de la pestaña, intento un último saveDraft
+window.addEventListener('beforeunload', () => {
+    if (selectedBox && currentUserId) saveDraft();
+});
+
+</script>
+</body>
 </html>

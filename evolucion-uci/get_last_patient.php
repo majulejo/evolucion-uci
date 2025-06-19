@@ -1,4 +1,5 @@
 <?php
+date_default_timezone_set('Europe/Madrid');
 require 'db.php';
 
 $user_id = $_GET['user_id'] ?? null;

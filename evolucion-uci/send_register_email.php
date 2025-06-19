@@ -1,4 +1,6 @@
 <?php
+date_default_timezone_set('Europe/Madrid');
+
 require 'config_correo.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

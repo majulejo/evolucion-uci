@@ -1,60 +1,56 @@
 <?php
 date_default_timezone_set('Europe/Madrid');
 session_start();
-// …
-
 header('Content-Type: application/json; charset=utf-8');
 
-// 1) Validaciones básicas
 if (!isset($_SESSION['user_id'])) {
-    echo json_encode(['success'=>false,'message'=>'No autenticado']);
+    echo json_encode(['success' => false, 'message' => 'No autenticado']);
     exit;
 }
-if (empty($_GET['id'])) {
-    echo json_encode(['success'=>false,'message'=>'Falta el parámetro id']);
-    exit;
-}
-$id  = $_GET['id'];
-$uid = $_SESSION['user_id'];
 
-// 2) Conexión PDO (ajusta tus credenciales)
+if (!isset($_GET['id'])) {
+    echo json_encode(['success' => false, 'message' => 'ID no proporcionado']);
+    exit;
+}
+
 try {
-    $db = new PDO('mysql:host=localhost;dbname=u724879249_evolucion_uci;charset=utf8mb4', 'u724879249_jamarquez06', 'Farolill01.');
-    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $pdo = new PDO(
+        'mysql:host=localhost;dbname=u724879249_evolucion_uci;charset=utf8mb4',
+        'u724879249_jamarquez06',
+        'Farolill01.'
+    );
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    // ————————————————
-    // 3) Aquí corregimos el SELECT:
-    $stmt = $db->prepare("
-        SELECT box, datos 
-          FROM reports 
-         WHERE id = :id 
-           AND user_id = :uid
+    $stmt = $pdo->prepare("
+        SELECT id, box, datos, timestamp
+        FROM reports
+        WHERE id = ? AND user_id = ?
+        LIMIT 1
     ");
-    $stmt->execute([':id'=>$id, ':uid'=>$uid]);
-
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    if (!$row) {
-        echo json_encode(['success'=>false,'message'=>'Informe no encontrado']);
-        exit;
+    
+    $stmt->execute([$_GET['id'], $_SESSION['user_id']]);
+    // En get_report.php, verifica el formato de los datos
+$informe = $stmt->fetch(PDO::FETCH_ASSOC);
+if ($informe) {
+    $datos = json_decode($informe['datos'], true);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        // Intenta reparar datos corruptos
+        $datos = json_decode(stripslashes($informe['datos']), true);
     }
-
-    // 4) Decodificamos el JSON que tienes en la columna 'datos'
-    $datos = json_decode($row['datos'], true);
-
-    // 5) Devolvemos la respuesta correcta
+    
     echo json_encode([
-        'success'=> true,
-        'id'     => $id,
-        'box'    => (int)$row['box'],
-        'datos'  => $datos
+        'success' => true,
+        'id' => $informe['id'],
+        'box' => $informe['box'],
+        'datos' => $datos ?: []
     ]);
-    exit;
-
+}
+    
 } catch (PDOException $e) {
-    http_response_code(500);
+    error_log("Error en get_report.php: " . $e->getMessage());
     echo json_encode([
         'success' => false,
-        'message' => 'Error interno de BBDD: ' . $e->getMessage()
+        'message' => 'Error de base de datos'
     ]);
-    exit;
 }
+?>

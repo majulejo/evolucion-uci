@@ -20,7 +20,7 @@ function cargarUsuarios() {
       ul.innerHTML = "";
       data.usuarios.forEach(u => {
         const li = document.createElement("li");
-        li.innerHTML = `👤 ${u.usuario} — ID: ${u.user_id}
+        li.innerHTML = `👤 ${u.usuario} — ID: ${u.id}
           <button onclick="eliminarUsuario(${u.id})" style="margin-left:10px; background:red; color:white; border:none; padding:4px 8px; border-radius:5px; cursor:pointer;">Eliminar</button>`;
         ul.appendChild(li);
       });

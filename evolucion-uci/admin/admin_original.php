@@ -14,12 +14,10 @@
 session_start();
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
-
 // ──────────────── CABECERAS NO-CACHE ────────────────
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Pragma: no-cache');
 header('Expires: 0');
-
 // ──────────────── CONFIGURACIÓN ────────────────
 define('ADMIN_TOKEN', 'faroladmin2024');
 define('SESSION_TIMEOUT', 120); // Segundos
@@ -32,7 +30,6 @@ if ($conn->connect_error) {
     die('Conexión fallida: ' . $conn->connect_error);
 }
 $conn->set_charset('utf8mb4');
-
 // ──────────────── FUNCIONES ÚTILES ────────────────
 function login_form(string $msg = ''): void {
     ?>
@@ -43,7 +40,7 @@ function login_form(string $msg = ''): void {
         <meta name="viewport" content="width=device-width,initial-scale=1">
         <title>Login Admin</title>
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"  rel="stylesheet">
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">   
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">  
         <style>
             .input-group .input-group-text {
                 background-color: transparent;
@@ -105,7 +102,6 @@ function login_form(string $msg = ''): void {
                 <i class="bi bi-box-arrow-left me-2"></i>Cerrar sesión
             </a>
         </div>
-
         <!-- Script anti-recarga -->
         <script>
         (function() {
@@ -113,11 +109,11 @@ function login_form(string $msg = ''): void {
                              performance.navigation.type === PerformanceNavigation.TYPE_BACK_FORWARD ||
                              performance.navigation.type === 255;
             if (isReload) {
-                window.location.replace("https://jolejuma.es/evolucion-uci/index.html");   
+                window.location.replace("https://jolejuma.es/evolucion-uci/index.html");  
             }
             document.addEventListener("keydown", function(e) {
                 if ((e.key === "F5") || (e.ctrlKey && e.key === "F5")) {
-                    window.location.href = "https://jolejuma.es/evolucion-uci/index.html";   
+                    window.location.href = "https://jolejuma.es/evolucion-uci/index.html";  
                 }
             });
         })();
@@ -133,7 +129,6 @@ function login_form(string $msg = ''): void {
     <?php
     exit;
 }
-
 // ──────────────── CONTROL DE SESIÓN ────────────────
 if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
     if ((time() - ($_SESSION['login_time'] ?? 0)) > SESSION_TIMEOUT) {
@@ -154,89 +149,54 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
     login_form();
 }
 $_SESSION['login_time'] = time();
-
 // ──────────────── ACCIONES: Crear/Eliminar Usuario ────────────────
 $alert = '';
 $alertType = 'success';
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $action = $_POST['action'];
     switch ($action) {
         case 'create':
             $usuario = trim($_POST['nuevo_usuario'] ?? '');
             $pass = trim($_POST['nuevo_clave'] ?? '');
-
             if (!$usuario || !$pass) {
                 $alertType = 'danger';
                 $alert = 'Debes rellenar usuario y contraseña.';
                 break;
             }
-
             $check = $conn->prepare("SELECT COUNT(*) FROM usuarios WHERE usuario = ?");
             $check->bind_param("s", $usuario);
             $check->execute();
             $check->bind_result($count);
             $check->fetch();
             $check->close();
-
             if ($count > 0) {
                 $alertType = 'danger';
                 $alert = "El usuario <strong>$usuario</strong> ya existe.";
                 break;
             }
-
-            // Cifrar la contraseña
-            $hashedPassword = password_hash($pass, PASSWORD_DEFAULT);
-
-            // Insertar en la tabla usuarios
+            $hash = password_hash($pass, PASSWORD_DEFAULT);
             $stmt = $conn->prepare("INSERT INTO usuarios (usuario, clave) VALUES (?, ?)");
-            $stmt->bind_param("ss", $usuario, $hashedPassword);
-
+            $stmt->bind_param("ss", $usuario, $hash);
             if ($stmt->execute()) {
-                // Insertar en la tabla user_password
-                $stmt_temp = $conn->prepare("INSERT INTO user_password (usuario, clave) VALUES (?, ?)");
-                $stmt_temp->bind_param("ss", $usuario, $pass);
-
-                if ($stmt_temp->execute()) {
-                    $alert = "Usuario creado correctamente: <strong>$usuario</strong>";
-                } else {
-                    $alertType = 'danger';
-                    $alert = 'Error al crear: ' . $stmt_temp->error;
-                }
+                $alert = "Usuario creado correctamente: <strong>$usuario</strong>";
             } else {
                 $alertType = 'danger';
                 $alert = 'Error al crear: ' . $stmt->error;
             }
-
             $stmt->close();
-            $stmt_temp->close();
             break;
-
         case 'delete':
             $id = (int)($_POST['id'] ?? 0);
             if ($id) {
-                // Eliminar de la tabla usuarios
                 $stmt = $conn->prepare("DELETE FROM usuarios WHERE id = ?");
                 $stmt->bind_param("i", $id);
-
                 if ($stmt->execute()) {
-                    // Eliminar de la tabla user_password
-                    $stmt_temp = $conn->prepare("DELETE FROM user_password WHERE usuario = ?");
-                    $stmt_temp->bind_param("s", $usuario);
-
-                    if ($stmt_temp->execute()) {
-                        $alert = "Usuario eliminado correctamente.";
-                    } else {
-                        $alertType = 'danger';
-                        $alert = 'Error al eliminar: ' . $stmt_temp->error;
-                    }
+                    $alert = "Usuario eliminado correctamente.";
                 } else {
                     $alertType = 'danger';
                     $alert = 'Error al eliminar: ' . $stmt->error;
                 }
-
                 $stmt->close();
-                $stmt_temp->close();
             } else {
                 $alertType = 'warning';
                 $alert = 'ID no válido.';
@@ -244,24 +204,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             break;
     }
 }
-
 // Consulta para obtener todos los usuarios con sus claves cifradas
 $result = $conn->query("SELECT id, usuario, clave FROM usuarios ORDER BY id DESC");
 $usuarios = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
-
-// Consulta para obtener usuarios añadidos temporalmente
-$temp_users_result = $conn->query("SELECT id, usuario, clave FROM user_password ORDER BY id DESC");
-$temp_users = $temp_users_result ? $temp_users_result->fetch_all(MYSQLI_ASSOC) : [];
 ?>
-
 <!doctype html>
 <html lang="es">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Gestión de Usuarios</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"  rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"  />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">  
     <style>
         body { background-color: #f0f9f0; color: #2e7d32; }
         .card-header { background-color: #4CAF50 !important; color: white !important; }
@@ -281,15 +235,12 @@ $temp_users = $temp_users_result ? $temp_users_result->fetch_all(MYSQLI_ASSOC) :
             <i class="bi bi-people-fill me-1"></i> Gestiona los usuarios del sistema
         </p>
     </div>
-
     <?php if ($alert): ?>
         <div class="alert alert-<?= $alertType ?> alert-dismissible fade show" role="alert">
             <?= $alert ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     <?php endif; ?>
-
-    <!-- Formulario para crear nuevos usuarios -->
     <div class="card mb-4 shadow-sm">
         <div class="card-header">Crear nuevo usuario</div>
         <div class="card-body">
@@ -307,8 +258,6 @@ $temp_users = $temp_users_result ? $temp_users_result->fetch_all(MYSQLI_ASSOC) :
             </form>
         </div>
     </div>
-
-    <!-- Tabla de usuarios existentes -->
     <div class="card shadow-sm">
         <div class="card-header">Usuarios existentes</div>
         <div class="card-body p-0">
@@ -335,34 +284,6 @@ $temp_users = $temp_users_result ? $temp_users_result->fetch_all(MYSQLI_ASSOC) :
             </table>
         </div>
     </div>
-
-    <!-- Tabla de usuarios añadidos temporalmente -->
-    <div class="card shadow-sm">
-        <div class="card-header">Usuarios añadidos temporalmente</div>
-        <div class="card-body p-0">
-            <table class="table table-striped mb-0">
-                <thead>
-                <tr><th>Usuario</th><th>Contraseña</th><th>Acciones</th></tr>
-                </thead>
-                <tbody>
-                <?php foreach ($temp_users as $tu): ?>
-                    <tr>
-                        <td><?= htmlspecialchars($tu['usuario']) ?></td>
-                        <td><?= htmlspecialchars($tu['clave']) ?></td>
-                        <td>
-                            <form method="post" style="display:inline">
-                                <input type="hidden" name="usuario" value="<?= $tu['usuario'] ?>">
-                                <input type="hidden" name="action" value="delete_temp">
-                                <button class="btn btn-sm btn-danger" onclick="return confirm('¿Eliminar este usuario temporal?')">Eliminar</button>
-                            </form>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
     <div class="mt-4 text-center">
         <a href="logout_and_redirect.php" 
            class="btn btn-outline-success mt-3 w-100 d-flex align-items-center justify-content-center">
@@ -371,30 +292,23 @@ $temp_users = $temp_users_result ? $temp_users_result->fetch_all(MYSQLI_ASSOC) :
     </div>
 </div>
 <script>
-    // Lógica JavaScript para eliminar usuarios temporales
-    document.querySelectorAll('form[action="delete_temp"]').forEach(form => {
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const usuario = form.querySelector('[name="usuario"]').value;
-            try {
-                const res = await fetch('delete_temp_user.php', {
-                    method: 'POST',
-                    credentials: 'same-origin',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ usuario })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    window.location.reload();
-                } else {
-                    alert(data.message);
-                }
-            } catch (err) {
-                console.error(err);
-                alert('Error de conexión.');
-            }
-        });
-    });
+function actualizarHashPreview() {
+    const pass = document.getElementById("nuevo_clave").value;
+    if (!pass) return;
+    fetch("hash_preview.php", {
+        method: "POST",
+        headers: {"Content-Type": "application/x-www-form-urlencoded"},
+        body: "pass=" + encodeURIComponent(pass)
+    }).then(res => res.text()).then(hash => document.getElementById("preview_hash").value = hash);
+}
+(function() {
+    const isReload = performance.navigation.type === PerformanceNavigation.TYPE_RELOAD ||
+                     performance.navigation.type === PerformanceNavigation.TYPE_BACK_FORWARD ||
+                     performance.navigation.type === 255;
+    if (isReload) {
+        window.location.replace("https://jolejuma.es/evolucion-uci/index.html");  
+    }
+})();
 </script>
 </body>
 </html>

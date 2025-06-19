@@ -91,27 +91,38 @@ section {
 }
 
 /* ─────────────────────────────── */
-/* Indicador flotante en esquina   */
+/* Indicador flotante (responsive) */
 /* ─────────────────────────────── */
 #box-indicador-flotante {
+  display: none;              /* oculto hasta selección */
   position: fixed;
   top: 1rem;
   left: 1rem;
   background: var(--hover-input);
   color:    var(--texto-1);
-  padding:  0.5rem 1rem;
-  border:   2px solid var(--borde);
+  padding:  clamp(0.25rem, 1.5vw, 0.5rem)  clamp(0.5rem, 3vw, 1rem);
+  border:   1px solid var(--borde);
   border-radius: 0.5rem;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
   font-weight: bold;
+  font-size: clamp(0.75rem, 1.2vw, 1rem);
   z-index: 1000;
-  user-select: none;
+  pointer-events: none;
+  opacity: 0.85;
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
-/* Opcional: versión oscura */
-body.dark-mode #box-indicador-flotante {
-  background: var(--borde);
-  color:      var(--dark-1);
+#box-indicador-flotante:hover {
+  opacity: 1;
+  transform: scale(1.05);
 }
+@media (max-width: 480px) {
+  #box-indicador-flotante {
+    top: 0.5rem; left: 0.5rem;
+    padding: 0.2rem 0.4rem;
+    font-size: 0.75rem;
+  }
+}
+
 
 
 /* =============================== */

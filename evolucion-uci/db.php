@@ -1,10 +1,18 @@
 <?php
-$host = "localhost";
-$db = "u724879249_evolucion_uci";
-$user = "u724879249_jamarquez06";
-$pass = "Farolill01.";
+session_start();
 
-$db = new mysqli($host,$user,$pass,$db);
-if ($db->connect_error) {
-    throw new Exception('Error MySQL: '.$db->connect_error);
+function connect() {
+    try {
+        $pdo = new PDO(
+            'mysql:host=localhost;dbname=u724879249_evolucion_uci;charset=utf8mb4',
+            'u724879249_jamarquez06',
+            'Farolill01.'
+        );
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        return $pdo;
+    } catch (PDOException $e) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => 'Error de conexión']);
+        exit;
+    }
 }
